@@ -8,8 +8,8 @@ use crate::{download::download_file, utils::read_temp_file};
 #[derive(Deserialize)]
 pub struct Sentence {
     pub id: String,
-    pub text: String,
     pub language: String,
+    pub text: String,
 }
 
 async fn get_resource(file_name: &str) -> Result<(), Box<dyn Error>> {
