@@ -18,7 +18,7 @@ fn create_schema() -> Schema {
 pub fn build_index(sentences: impl Iterator<Item = Sentence>) -> Result<(), Box<dyn Error>> {
     let schema = create_schema();
     let index_path = &format!("{}/idx", TEMP_DIR);
-    println!("{}", index_path);
+
     if !file_exists(index_path) {
         create_dir(index_path)?;
     }
