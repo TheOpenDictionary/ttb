@@ -14,8 +14,8 @@ impl Stepper {
     }
 
     pub fn print_step(&mut self, emoji: &str, label: &str) {
-        if self.current < self.total {
-            let emoji_prefix = &format!("{}  ", emoji);
+        if self.current <= self.total {
+            let emoji_prefix = &format!("{} ", emoji);
             let emoji_ = Emoji(emoji_prefix, "");
             let nums = format!("[{}/{}]", self.current, self.total);
             let prefix = style(nums).bold().dim();

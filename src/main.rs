@@ -1,27 +1,17 @@
 mod cli;
 mod core;
 
+use clap::{Args, CommandFactory};
 use std::path::PathBuf;
 
-use clap::{command, Parser, Subcommand};
+use clap::{command, Command, Parser, Subcommand};
 use cli::build::build;
 
 pub static TEMP_DIR: &str = ".tmp";
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author,  version, about, long_about = None, arg_required_else_help = true, )]
 struct Cli {
-    /// Optional name to operate on
-    name: Option<String>,
-
-    /// Sets a custom config file
-    #[arg(short, long, value_name = "FILE")]
-    config: Option<PathBuf>,
-
-    /// Turn debugging information on
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    debug: u8,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }

@@ -1,4 +1,8 @@
-use std::{error::Error, fs::File, path::Path};
+use std::{
+    error::Error,
+    fs::File,
+    path::{Path, PathBuf},
+};
 
 use csv::{ReaderBuilder, StringRecord};
 use serde::Deserialize;
@@ -19,20 +23,19 @@ pub enum TatoebaResource {
     Sentences,
 }
 
-pub async fn download_resource(
+pub async fn download_resource<P: AsRef<Path>>(
     resource: TatoebaResource,
-    dst: &Path,
-) -> Result<String, Box<dyn Error>> {
+    dst: P,
+) -> Result<PathBuf, Box<dyn Error>> {
     let url = &format!("https://downloads.tatoeba.org/exports/{}", resource);
-    let file = resource.to_string();
-    let path = dst.join(file.clone());
+    let path = dst.as_ref().join(resource.to_string());
 
     download_file(url, &path).await?;
 
-    Ok(file)
+    Ok(path)
 }
 
-pub async fn read_sentences_from_csv(csv_file: &str) -> Result<Vec<Sentence>, Box<dyn Error>> {
+pub async fn read_sentences_from_csv(csv_file: &Path) -> Result<Vec<Sentence>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
     let mut builder = ReaderBuilder::new()

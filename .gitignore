@@ -84,5 +84,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
-# Temp directory
+# Temp files
 .tmp 
+tatoeba.tar.bz2

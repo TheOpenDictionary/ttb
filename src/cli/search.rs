@@ -5,24 +5,20 @@ use tantivy::{
     Index, Term,
 };
 
-use crate::core::indexer::create_schema;
+use crate::core::schema::{FIELD_LANGUAGE, FIELD_TEXT};
 
 pub fn search() {
     let index = Index::open_in_dir(".tmp/idx").unwrap();
     let reader = index.reader_builder().try_into().unwrap();
-
-    let schema = create_schema();
     let searcher = reader.searcher();
-    let text = schema.get_field("text").unwrap();
-    let language = schema.get_field("language").unwrap();
 
     let text_query: Box<dyn Query> = Box::new(TermQuery::new(
-        Term::from_field_text(text, "bonjour"),
+        Term::from_field_text(*FIELD_TEXT, "bonjour"),
         IndexRecordOption::Basic,
     ));
 
     let lang_query: Box<dyn Query> = Box::new(TermQuery::new(
-        Term::from_field_text(language, "fra"),
+        Term::from_field_text(*FIELD_LANGUAGE, "fra"),
         IndexRecordOption::Basic,
     ));
 
@@ -38,7 +34,7 @@ pub fn search() {
         println!(
             "{}",
             retrieved_doc
-                .get_first(schema.get_field("text").unwrap())
+                .get_first(*FIELD_TEXT)
                 .unwrap()
                 .as_text()
                 .unwrap()
