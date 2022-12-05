@@ -18,7 +18,8 @@ pub fn build_index(sentences: Vec<Sentence>) -> Result<(), Box<dyn Error>> {
     let index = Index::create_in_dir(&tmp, SCHEMA.clone())?;
 
     progress.set_style(
-        ProgressStyle::default_bar().template("{wide_bar} {human_pos}/{human_len} sentences")?,
+        ProgressStyle::default_bar()
+            .template("{spinner} {human_pos}/{human_len} sentences {wide_bar}")?,
     );
 
     let mut index_writer = index.writer(50_000_000)?;

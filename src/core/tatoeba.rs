@@ -21,6 +21,8 @@ pub struct Sentence {
 pub enum TatoebaResource {
     #[strum(serialize = "sentences.tar.bz2")]
     Sentences,
+    #[strum(serialize = "links.tar.bz2")]
+    Links,
 }
 
 pub async fn download_resource<P: AsRef<Path>>(

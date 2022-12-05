@@ -25,7 +25,9 @@ pub async fn download_file(url: &str, path: &Path) -> Result<(), Box<dyn Error>>
 
     let pb = ProgressBar::new(total_size);
 
-    pb.set_style(ProgressStyle::default_bar().template("{wide_bar} {bytes}/{total_bytes}")?);
+    pb.set_style(
+        ProgressStyle::default_bar().template("{spinner} {bytes}/{total_bytes} {wide_bar}")?,
+    );
 
     let mut file =
         File::create(path).or(Err(format!("Failed to create file '{}'", path.display())))?;

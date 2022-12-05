@@ -1,4 +1,5 @@
 use console::Emoji;
+use futures::join;
 use std::error::Error;
 use tempfile::TempDir;
 
@@ -17,13 +18,17 @@ pub async fn build() -> Result<(), Box<dyn Error>> {
     let mut stepper = Stepper::new(4);
     let tmp = TempDir::new()?;
 
-    stepper.print_step("🌍", "Downloading latest Tatoeba sentence data...");
+    stepper.print_step("🌍", "Downloading latest Tatoeba data...");
 
-    let file_name = download_resource(TatoebaResource::Sentences, &tmp).await?;
+    let sentences_file_name = download_resource(TatoebaResource::Sentences, &tmp).await?;
+    let links_file_name = download_resource(TatoebaResource::Links, &tmp).await?;
 
-    stepper.print_step("💥", "Extracting archive...");
+    stepper.print_step("💥", "Extracting archives...");
 
-    extract_tar_bz2(&file_name, &tmp)?;
+    let _ = join!(
+        extract_tar_bz2(&sentences_file_name, &tmp),
+        extract_tar_bz2(&links_file_name, &tmp),
+    );
 
     stepper.print_step("🧠", "Loading sentences into memory...");
 
