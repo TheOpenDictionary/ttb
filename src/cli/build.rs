@@ -1,7 +1,8 @@
 use console::Emoji;
-use futures::join;
+use indicatif::MultiProgress;
 use std::error::Error;
 use tempfile::TempDir;
+use tokio::join;
 
 use crate::{
     cli::stepper::Stepper,
@@ -20,8 +21,15 @@ pub async fn build() -> Result<(), Box<dyn Error>> {
 
     stepper.print_step("🌍", "Downloading latest Tatoeba data...");
 
-    let sentences_file_name = download_resource(TatoebaResource::Sentences, &tmp).await?;
-    let links_file_name = download_resource(TatoebaResource::Links, &tmp).await?;
+    let mp = MultiProgress::new();
+
+    let files = join!(
+        download_resource(TatoebaResource::Sentences, &tmp, &mp),
+        download_resource(TatoebaResource::Links, &tmp, &mp)
+    );
+
+    let sentences_file_name = files.0?;
+    let links_file_name = files.1?;
 
     stepper.print_step("💥", "Extracting archives...");
 
