@@ -1,5 +1,5 @@
 [package]
-name = "tatoeba"
+name = "ttb"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,8 @@ edition = "2021"
 
 [dependencies]
 bzip2 = "0.4.3"
-clap = "4.0.29"
+cang-jie = "0.14.0"
+clap = {version = "4.0.29", features = ["derive"]}
 csv = "1.1.6"
 indicatif = "0.17.2"
 reqwest = "0.11.12"
@@ -16,3 +17,6 @@ tantivy = "0.18.1"
 tar = "0.4.38"
 tempfile = "3.3.0"
 tokio = {version = "1.21.2", features = ["full"]}
+lindera-tantivy = { version = "0.12.0", features = ["ipadic"] }
+console = "0.15.2"
+strum = { version = "0.24", features = ["derive"] }
