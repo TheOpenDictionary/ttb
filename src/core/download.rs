@@ -1,12 +1,9 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use once_cell::sync::Lazy;
-use reqwest::{Client, IntoUrl};
-use std::{borrow::Cow, cmp::min, error::Error, fs::File, io::Write, path::Path};
 use tokio_stream::StreamExt;
 
-use super::utils::exists;
+use std::{cmp::min, error::Error, fs::File, io::Write, path::Path};
 
-const CLIENT: Lazy<Client> = Lazy::new(|| Client::new());
+use super::{constants::HTTP_CLIENT, utils::exists};
 
 pub async fn download_file<P: AsRef<Path>>(
     url: &str,
@@ -18,7 +15,7 @@ pub async fn download_file<P: AsRef<Path>>(
         return Ok(());
     }
 
-    let res = CLIENT
+    let res = HTTP_CLIENT
         .get(url)
         .send()
         .await

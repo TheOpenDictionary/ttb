@@ -7,6 +7,7 @@ use std::{
 
 use csv::{ReaderBuilder, StringRecord};
 use indicatif::MultiProgress;
+use once_cell::sync::Lazy;
 use serde::Deserialize;
 use strum::Display;
 
@@ -19,13 +20,20 @@ pub struct Sentence {
     pub text: String,
 }
 
-#[derive(Display, Debug)]
+#[derive(Display, Debug, Eq, Hash, PartialEq)]
 pub enum TatoebaResource {
     #[strum(serialize = "sentences.tar.bz2")]
     Sentences,
     #[strum(serialize = "links.tar.bz2")]
     Links,
 }
+
+const TATOEBA_FILES: Lazy<HashMap<TatoebaResource, &str>> = Lazy::new(|| {
+    HashMap::from([
+        (TatoebaResource::Sentences, "sentences.csv"),
+        (TatoebaResource::Links, "links.csv"),
+    ])
+});
 
 pub async fn download_resource<P: AsRef<Path>>(
     resource: TatoebaResource,
@@ -38,6 +46,10 @@ pub async fn download_resource<P: AsRef<Path>>(
     download_file(url, &path, resource.to_string(), mp).await?;
 
     Ok(path)
+}
+
+pub fn get_resource_file_name(resource: TatoebaResource) -> &'static str {
+    TATOEBA_FILES.get(&resource).unwrap()
 }
 
 pub async fn read_sentences_from_csv(csv_file: &Path) -> Result<Vec<Sentence>, Box<dyn Error>> {
@@ -60,23 +72,30 @@ pub async fn read_sentences_from_csv(csv_file: &Path) -> Result<Vec<Sentence>, B
 
 pub async fn read_links_from_csv(
     csv_file: &Path,
-) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
+) -> Result<HashMap<String, Vec<u64>>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
-    let mut builder = ReaderBuilder::new()
+    let builder = ReaderBuilder::new()
         .has_headers(false)
         .delimiter(b'\t')
         .from_reader(output);
 
-    builder.set_headers(StringRecord::from(vec!["id", "language", "text"]));
-
-    let data: HashMap<String, Vec<String>> =
+    let data: HashMap<String, Vec<u64>> =
         builder
             .into_records()
             .filter_map(|r| r.ok())
             .fold(HashMap::new(), |mut map, r| {
                 let k = r.get(0).unwrap().to_string();
-                let v = r.get(1).unwrap().to_string();
+                let v = r
+                    .get(1)
+                    .unwrap()
+                    .to_string()
+                    .parse::<u64>()
+                    .or(Err(format!(
+                        "Failed to parse integer: {}",
+                        r.get(1).unwrap()
+                    )))
+                    .unwrap();
 
                 if let Some(values) = map.get_mut(&k) {
                     values.push(v);

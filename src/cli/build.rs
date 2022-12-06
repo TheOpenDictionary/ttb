@@ -7,8 +7,11 @@ use tokio::join;
 use crate::{
     cli::stepper::Stepper,
     core::{
-        indexer::build_index,
-        tatoeba::{download_resource, read_sentences_from_csv, TatoebaResource},
+        index::build_index,
+        tatoeba::{
+            download_resource, get_resource_file_name, read_links_from_csv,
+            read_sentences_from_csv, TatoebaResource,
+        },
         utils::extract_tar_bz2,
     },
 };
@@ -18,6 +21,7 @@ const LIGHTNING: Emoji = Emoji("⚡", "");
 pub async fn build() -> Result<(), Box<dyn Error>> {
     let mut stepper = Stepper::new(4);
     let tmp = TempDir::new()?;
+    let tmp_path = tmp.path();
 
     stepper.print_step("🌍", "Downloading latest Tatoeba data...");
 
@@ -40,11 +44,16 @@ pub async fn build() -> Result<(), Box<dyn Error>> {
 
     stepper.print_step("🧠", "Loading sentences into memory...");
 
-    let sentences = read_sentences_from_csv(&tmp.path().join("sentences.csv")).await?;
+    let sentences =
+        read_sentences_from_csv(&tmp_path.join(get_resource_file_name(TatoebaResource::Sentences)))
+            .await?;
+
+    let links =
+        read_links_from_csv(&tmp_path.join(get_resource_file_name(TatoebaResource::Links))).await?;
 
     stepper.print_step("🏗️ ", "Building index...");
 
-    build_index(sentences)?;
+    build_index(sentences, links)?;
 
     println!("\n\n{} All done!", LIGHTNING);
 

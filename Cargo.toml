@@ -23,4 +23,6 @@ strum = { version = "0.24", features = ["derive"] }
 lingua = { version = "1.4.0", default-features = false, features = ["chinese", "japanese", "korean", "english"] }
 once_cell = "1.16.0"
 tokio-stream = "0.1.11"
+dirs = "4.0.0"
+surrealdb = "1.0.0-beta.8"
 
