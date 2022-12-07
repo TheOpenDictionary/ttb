@@ -3,19 +3,21 @@ use std::{collections::HashMap, error::Error, fs::File};
 use bzip2::{write::BzEncoder, Compression};
 use indicatif::{ProgressBar, ProgressStyle};
 
+use once_cell::sync::Lazy;
+use serde_json::{Map, Value};
 use tantivy::{doc, Index};
 use tar::Builder;
 use tempfile::TempDir;
 
 use super::{
     constants::ARCHIVE_NAME,
-    schema::{FIELD_LANGUAGE, FIELD_TEXT, FIELD_TRANSLATIONS, SCHEMA},
+    schema::{FIELD_LANGUAGE, FIELD_LENGTH, FIELD_TEXT, FIELD_TRANSLATIONS, SCHEMA},
     tatoeba::Sentence,
 };
 
 pub fn build_index(
-    sentences: Vec<Sentence>,
-    links: HashMap<String, Vec<u64>>,
+    sentences: HashMap<String, Sentence>,
+    links: HashMap<String, Vec<String>>,
 ) -> Result<(), Box<dyn Error>> {
     let tmp = TempDir::new()?;
     let progress = ProgressBar::new(sentences.len() as u64);
@@ -26,19 +28,28 @@ pub fn build_index(
             .template("{spinner} {human_pos}/{human_len} sentences {wide_bar}")?,
     );
 
-    let mut index_writer = index.writer(50_000_000)?;
+    let mut index_writer = index.writer(100_000_000)?;
 
-    for s in sentences {
+    for (_, s) in sentences.iter() {
         progress.inc(1);
 
         let default = vec![];
         let translations = links.get(&s.id).unwrap_or(&default);
 
-        let mut d = doc!(*FIELD_TEXT => s.text, *FIELD_LANGUAGE => s.language);
+        let mut d = doc!(
+          *FIELD_TEXT => s.text.as_str(),
+          *FIELD_LANGUAGE => s.language.as_str(),
+          *FIELD_LENGTH => s.text.len() as u64
+        );
 
-        for t in translations {
-            d.add_u64(*FIELD_TRANSLATIONS, *t);
-        }
+        let trans: Map<String, Value> = translations.iter().fold(Map::new(), |mut accum, item| {
+            if let Some(sent) = sentences.get(item) {
+                accum.insert(item.to_string(), Value::String(sent.text.clone()));
+            }
+            accum
+        });
+
+        d.add_json_object(*FIELD_TRANSLATIONS, trans);
 
         index_writer.add_document(d)?;
     }

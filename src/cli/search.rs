@@ -8,7 +8,7 @@ pub async fn search(
     translation: &Option<String>,
     limit: &usize,
 ) -> Result<(), Box<dyn Error>> {
-    let results = crate::core::search::search(query.as_str(), language, limit).await?;
+    let results = crate::core::search::search(query.as_str(), language, translation, limit).await?;
 
     for (idx, result) in results.iter().enumerate() {
         let text = result.get_first(*FIELD_TEXT).unwrap().as_text().unwrap();

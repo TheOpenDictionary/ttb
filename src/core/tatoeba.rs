@@ -13,7 +13,7 @@ use strum::Display;
 
 use super::download::download_file;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Sentence {
     pub id: String,
     pub language: String,
@@ -52,7 +52,9 @@ pub fn get_resource_file_name(resource: TatoebaResource) -> &'static str {
     TATOEBA_FILES.get(&resource).unwrap()
 }
 
-pub async fn read_sentences_from_csv(csv_file: &Path) -> Result<Vec<Sentence>, Box<dyn Error>> {
+pub async fn read_sentences_from_csv(
+    csv_file: &Path,
+) -> Result<HashMap<String, Sentence>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
     let mut builder = ReaderBuilder::new()
@@ -65,14 +67,17 @@ pub async fn read_sentences_from_csv(csv_file: &Path) -> Result<Vec<Sentence>, B
     let data = builder
         .into_deserialize::<Sentence>()
         .map(|r| r.unwrap())
-        .collect();
+        .fold(HashMap::new(), |mut acc, item| {
+            acc.insert(item.id.clone(), item);
+            acc
+        });
 
     Ok(data)
 }
 
 pub async fn read_links_from_csv(
     csv_file: &Path,
-) -> Result<HashMap<String, Vec<u64>>, Box<dyn Error>> {
+) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
     let builder = ReaderBuilder::new()
@@ -80,22 +85,13 @@ pub async fn read_links_from_csv(
         .delimiter(b'\t')
         .from_reader(output);
 
-    let data: HashMap<String, Vec<u64>> =
+    let data: HashMap<String, Vec<String>> =
         builder
             .into_records()
             .filter_map(|r| r.ok())
             .fold(HashMap::new(), |mut map, r| {
                 let k = r.get(0).unwrap().to_string();
-                let v = r
-                    .get(1)
-                    .unwrap()
-                    .to_string()
-                    .parse::<u64>()
-                    .or(Err(format!(
-                        "Failed to parse integer: {}",
-                        r.get(1).unwrap()
-                    )))
-                    .unwrap();
+                let v = r.get(1).unwrap().to_string();
 
                 if let Some(values) = map.get_mut(&k) {
                     values.push(v);

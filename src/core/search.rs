@@ -9,11 +9,12 @@ use tantivy::{
 
 use crate::core::schema::{FIELD_LANGUAGE, FIELD_TEXT};
 
-use super::constants::INDEX_DIR;
+use super::{constants::INDEX_DIR, schema::FIELD_TRANSLATIONS};
 
 pub async fn search(
     query: &str,
     language: &Option<String>,
+    has_translation: &Option<String>,
     limit: &usize,
 ) -> Result<Vec<Document>, Box<dyn Error>> {
     let index = Index::open_in_dir(INDEX_DIR.as_path())
@@ -37,6 +38,15 @@ pub async fn search(
         ));
 
         queries_set.push((Occur::Must, lang_query));
+    }
+
+    if let Some(translation) = has_translation {
+        let trans_query: Box<dyn Query> = Box::new(TermQuery::new(
+            Term::from_field_text(*FIELD_TRANSLATIONS, translation.as_str()),
+            IndexRecordOption::Basic,
+        ));
+
+        queries_set.push((Occur::Must, trans_query));
     }
 
     let queries = BooleanQuery::from(queries_set);

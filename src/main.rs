@@ -2,7 +2,7 @@ mod cli;
 mod core;
 
 use clap::{command, Parser, Subcommand};
-use cli::{build::build, search::search};
+use cli::{build::build, pull::pull, search::search};
 
 #[derive(Parser)]
 #[command(author,  version, about, long_about = None, arg_required_else_help = true, )]
@@ -13,9 +13,11 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Downloads the latest Tatoeba data and builds a local, compressed index
+    /// Downloads the latest Tatoeba data and builds a local, compressed index. You should almost never need to use this.
     Build,
-    /// Searches the local Tatoeba index if one exists
+    /// Downloads and extracts the prebuilt Tatoeba index from GitHub.
+    Pull,
+    /// Searches the local Tatoeba index if one exists.
     Search {
         /// Limit to the top k results
         #[arg(long, short, default_value_t = 10)]
@@ -39,6 +41,9 @@ async fn main() {
     match &cli.command {
         Some(Commands::Build) => {
             build().await.unwrap();
+        }
+        Some(Commands::Pull) => {
+            pull().await.unwrap();
         }
         Some(Commands::Search {
             lang,
