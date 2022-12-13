@@ -15,7 +15,7 @@ use super::download::download_file;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Sentence {
-    pub id: String,
+    pub id: u64,
     pub language: String,
     pub text: String,
 }
@@ -54,7 +54,7 @@ pub fn get_resource_file_name(resource: TatoebaResource) -> &'static str {
 
 pub async fn read_sentences_from_csv(
     csv_file: &Path,
-) -> Result<HashMap<String, Sentence>, Box<dyn Error>> {
+) -> Result<impl Iterator<Item = Sentence>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
     let mut builder = ReaderBuilder::new()
@@ -66,18 +66,14 @@ pub async fn read_sentences_from_csv(
 
     let data = builder
         .into_deserialize::<Sentence>()
-        .map(|r| r.unwrap())
-        .fold(HashMap::new(), |mut acc, item| {
-            acc.insert(item.id.clone(), item);
-            acc
-        });
+        .filter_map(|r| r.ok());
 
     Ok(data)
 }
 
 pub async fn read_links_from_csv(
     csv_file: &Path,
-) -> Result<HashMap<String, Vec<String>>, Box<dyn Error>> {
+) -> Result<HashMap<u64, Vec<u64>>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
     let builder = ReaderBuilder::new()
@@ -85,13 +81,13 @@ pub async fn read_links_from_csv(
         .delimiter(b'\t')
         .from_reader(output);
 
-    let data: HashMap<String, Vec<String>> =
+    let data: HashMap<u64, Vec<u64>> =
         builder
             .into_records()
             .filter_map(|r| r.ok())
             .fold(HashMap::new(), |mut map, r| {
-                let k = r.get(0).unwrap().to_string();
-                let v = r.get(1).unwrap().to_string();
+                let k: u64 = r.get(0).unwrap().to_string().parse().unwrap();
+                let v: u64 = r.get(1).unwrap().to_string().parse().unwrap();
 
                 if let Some(values) = map.get_mut(&k) {
                     values.push(v);

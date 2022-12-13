@@ -4,10 +4,11 @@ use tantivy::schema::{Field, Schema, FAST, INDEXED, STORED, STRING, TEXT};
 fn create_schema() -> Schema {
     let mut schema_builder = Schema::builder();
 
+    schema_builder.add_u64_field("id", FAST);
     schema_builder.add_text_field("text", TEXT | STORED);
     schema_builder.add_text_field("language", STRING);
     schema_builder.add_u64_field("length", FAST | INDEXED);
-    schema_builder.add_json_field("translations", STRING | STORED);
+    schema_builder.add_json_field("translations", TEXT | STORED);
 
     schema_builder.build()
 }

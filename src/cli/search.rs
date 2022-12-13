@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use crate::core::schema::FIELD_TEXT;
+use crate::core::schema::{FIELD_TEXT, FIELD_TRANSLATIONS};
 
 pub async fn search(
     query: &String,
@@ -12,8 +12,13 @@ pub async fn search(
 
     for (idx, result) in results.iter().enumerate() {
         let text = result.get_first(*FIELD_TEXT).unwrap().as_text().unwrap();
+        let json = result
+            .get_first(*FIELD_TRANSLATIONS)
+            .unwrap()
+            .as_json()
+            .unwrap();
 
-        println!("{:>2}. {}", idx + 1, text);
+        println!("{:>2}. {} {:#?}", idx + 1, text, json);
     }
 
     Ok(())

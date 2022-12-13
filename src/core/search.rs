@@ -2,7 +2,7 @@ use std::error::Error;
 
 use tantivy::{
     collector::TopDocs,
-    query::{BooleanQuery, Occur, Query, TermQuery},
+    query::{BooleanQuery, Occur, Query, QueryParser, TermQuery},
     schema::IndexRecordOption,
     DocId, Document, Index, SegmentReader, Term,
 };
@@ -22,37 +22,26 @@ pub async fn search(
         .unwrap();
 
     let reader = index.reader_builder().try_into()?;
+
     let searcher = reader.searcher();
 
-    let text_query: Box<dyn Query> = Box::new(TermQuery::new(
-        Term::from_field_text(*FIELD_TEXT, query),
-        IndexRecordOption::Basic,
-    ));
+    let query_parser = QueryParser::for_index(
+        &index,
+        vec![*FIELD_LANGUAGE, *FIELD_TEXT, *FIELD_TRANSLATIONS],
+    );
 
-    let mut queries_set = vec![(Occur::Must, text_query)];
-
-    if let Some(lang) = language {
-        let lang_query: Box<dyn Query> = Box::new(TermQuery::new(
-            Term::from_field_text(*FIELD_LANGUAGE, lang.as_str()),
-            IndexRecordOption::Basic,
-        ));
-
-        queries_set.push((Occur::Must, lang_query));
-    }
-
-    if let Some(translation) = has_translation {
-        let trans_query: Box<dyn Query> = Box::new(TermQuery::new(
-            Term::from_field_text(*FIELD_TRANSLATIONS, translation.as_str()),
-            IndexRecordOption::Basic,
-        ));
-
-        queries_set.push((Occur::Must, trans_query));
-    }
-
-    let queries = BooleanQuery::from(queries_set);
+    let query = query_parser.parse_query(
+        format!(
+            "{} AND language:{} AND translations.{}:*",
+            query,
+            language.as_ref().unwrap(),
+            has_translation.as_ref().unwrap(),
+        )
+        .as_str(),
+    )?;
 
     let top_docs = searcher.search(
-        &queries,
+        &*query,
         &TopDocs::with_limit(*limit).custom_score(move |sr: &SegmentReader| {
             // let popularity_reader = sr.().u64(popularity).unwrap();
 
