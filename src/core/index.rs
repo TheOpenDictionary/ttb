@@ -16,7 +16,7 @@ use super::{
 };
 
 pub fn build_index(
-    sentences: impl Iterator<Item = Sentence>,
+    sentences: HashMap<u64, Sentence>,
     links: HashMap<u64, Vec<u64>>,
 ) -> Result<(), Box<dyn Error>> {
     let tmp = TempDir::new()?;
@@ -27,27 +27,27 @@ pub fn build_index(
         ProgressStyle::default_bar().template("{spinner} {human_pos} sentences indexed")?,
     );
 
-    let mut index_writer = index.writer(100_000_000)?;
+    let mut index_writer = index.writer(50_000_000)?;
 
-    for s in sentences {
+    for s in sentences.values() {
         progress.inc(1);
-        // let default = vec![];
-        // let translations = links.get(&s.id).unwrap_or(&default);
+        let default = vec![];
+        let translations = links.get(&s.id).unwrap_or(&default);
 
-        let d = doc!(
+        let mut d = doc!(
           *FIELD_TEXT => s.text.as_str(),
           *FIELD_LANGUAGE => s.language.as_str(),
           *FIELD_LENGTH => s.text.len() as u64
         );
 
-        // let trans: Map<String, Value> = translations.iter().fold(Map::new(), |mut accum, item| {
-        //     if let Some(sent) = sentences.get(item) {
-        //         accum.insert(sent.language.clone(), Value::Number(Number::from(sent.id)));
-        //     }
-        //     accum
-        // });
+        let trans: Map<String, Value> = translations.iter().fold(Map::new(), |mut accum, item| {
+            if let Some(sent) = sentences.get(item) {
+                accum.insert(sent.language.clone(), Value::String(sent.text.clone()));
+            }
+            accum
+        });
 
-        // d.add_json_object(*FIELD_TRANSLATIONS, trans);
+        d.add_json_object(*FIELD_TRANSLATIONS, trans);
 
         index_writer.add_document(d)?;
     }

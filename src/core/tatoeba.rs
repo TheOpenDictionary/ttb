@@ -54,7 +54,7 @@ pub fn get_resource_file_name(resource: TatoebaResource) -> &'static str {
 
 pub async fn read_sentences_from_csv(
     csv_file: &Path,
-) -> Result<impl Iterator<Item = Sentence>, Box<dyn Error>> {
+) -> Result<HashMap<u64, Sentence>, Box<dyn Error>> {
     let output = File::open(csv_file)?;
 
     let mut builder = ReaderBuilder::new()
@@ -66,7 +66,11 @@ pub async fn read_sentences_from_csv(
 
     let data = builder
         .into_deserialize::<Sentence>()
-        .filter_map(|r| r.ok());
+        .filter_map(|r| r.ok())
+        .fold(HashMap::new(), |mut accum, r| {
+            accum.insert(r.id, r);
+            accum
+        });
 
     Ok(data)
 }
