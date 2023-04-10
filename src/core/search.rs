@@ -30,24 +30,18 @@ pub async fn search(
         vec![*FIELD_LANGUAGE, *FIELD_TEXT, *FIELD_TRANSLATIONS],
     );
 
-    let query = query_parser.parse_query(
-        format!(
-            "{} AND language:{} AND translations.{}:*",
-            query,
-            language.as_ref().unwrap(),
-            has_translation.as_ref().unwrap(),
-        )
-        .as_str(),
-    )?;
+    let query_str = format!(
+        "\"{}\" AND language:{} AND translations.{}:+",
+        query,
+        language.as_ref().unwrap(),
+        has_translation.as_ref().unwrap(),
+    );
 
-    let top_docs = searcher.search(
-        &*query,
-        &TopDocs::with_limit(*limit).custom_score(move |sr: &SegmentReader| {
-            // let popularity_reader = sr.().u64(popularity).unwrap();
+    print!("{}", query_str);
 
-            move |doc_id: DocId| doc_id
-        }),
-    )?;
+    let query = query_parser.parse_query(query_str.as_str())?;
+
+    let top_docs = searcher.search(&*query, &TopDocs::with_limit(*limit))?;
 
     let docs = top_docs
         .iter()

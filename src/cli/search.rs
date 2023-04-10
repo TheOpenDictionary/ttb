@@ -18,7 +18,9 @@ pub async fn search(
             .as_json()
             .unwrap();
 
-        println!("{:>2}. {} {:#?}", idx + 1, text, json);
+        let trans = json.get("fra").map(|r| r.as_u64());
+
+        println!("{:>2}. {} {:?}", idx + 1, text, trans);
     }
 
     Ok(())

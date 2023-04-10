@@ -1,69 +1,64 @@
-use std::{collections::HashMap, error::Error, fs::File};
+use std::{collections::HashMap, error::Error, fs};
 
-use bzip2::{write::BzEncoder, Compression};
 use indicatif::{ProgressBar, ProgressStyle};
 
-use once_cell::sync::Lazy;
-use serde_json::{Map, Number, Value};
-use tantivy::{doc, Index};
-use tar::Builder;
-use tempfile::TempDir;
+use rusqlite::Connection;
 
-use super::{
-    constants::ARCHIVE_NAME,
-    schema::{FIELD_LANGUAGE, FIELD_LENGTH, FIELD_TEXT, FIELD_TRANSLATIONS, SCHEMA},
-    tatoeba::Sentence,
-};
+use super::tatoeba::Sentence;
 
 pub fn build_index(
     sentences: HashMap<u64, Sentence>,
     links: HashMap<u64, Vec<u64>>,
 ) -> Result<(), Box<dyn Error>> {
-    let tmp = TempDir::new()?;
+    if fs::metadata("tatoeba.db").is_ok() {
+        fs::remove_file("tatoeba.db")?;
+    }
+
+    let conn = Connection::open("tatoeba.db")?;
+    // FOREIGN KEY (sentence_id) REFERENCES sentences(id),
+    // FOREIGN KEY (translation_id) REFERENCES sentences(id)
+    conn.execute_batch(
+        "CREATE TABLE sentences (
+          id        INTEGER PRIMARY KEY,
+          language  TEXT NOT NULL,
+          text      TEXT NOT NULL
+        ); 
+
+        CREATE TABLE translations (
+          sentence_id INTEGER,
+          translation_id INTEGER
+        );
+        
+        CREATE INDEX language_idx ON sentences(language);
+        
+        CREATE VIRTUAL TABLE sentences_fts USING fts5(text, language, content=sentences, content_rowid=id);",
+    )?;
+
     let progress = ProgressBar::new_spinner();
-    let index = Index::create_in_dir(&tmp, SCHEMA.clone())?;
 
     progress.set_style(
         ProgressStyle::default_bar().template("{spinner} {human_pos} sentences indexed")?,
     );
 
-    let mut index_writer = index.writer(50_000_000)?;
+    for s in sentences {
+        conn.execute(
+            "INSERT INTO sentences (id, language, text) VALUES ($1, $2, $3);",
+            (s.0, s.1.language, s.1.text),
+        )?;
 
-    for s in sentences.values() {
-        progress.inc(1);
-        let default = vec![];
-        let translations = links.get(&s.id).unwrap_or(&default);
-
-        let mut d = doc!(
-          *FIELD_TEXT => s.text.as_str(),
-          *FIELD_LANGUAGE => s.language.as_str(),
-          *FIELD_LENGTH => s.text.len() as u64
-        );
-
-        let trans: Map<String, Value> = translations.iter().fold(Map::new(), |mut accum, item| {
-            if let Some(sent) = sentences.get(item) {
-                accum.insert(sent.language.clone(), Value::String(sent.text.clone()));
+        for l in links.get(&(s.0)) {
+            for t in l {
+                conn.execute(
+                    "INSERT INTO translations (sentence_id, translation_id) VALUES ($1, $2);",
+                    (s.0, t),
+                )?;
             }
-            accum
-        });
+        }
 
-        d.add_json_object(*FIELD_TRANSLATIONS, trans);
-
-        index_writer.add_document(d)?;
+        progress.inc(1);
     }
 
     progress.finish();
-
-    index_writer.commit()?;
-    index_writer.wait_merging_threads()?;
-
-    let file = File::create(ARCHIVE_NAME).unwrap();
-    let encoder = BzEncoder::new(file, Compression::best());
-    let mut builder = Builder::new(encoder);
-
-    builder.append_dir_all(".", &tmp)?;
-
-    builder.finish().unwrap();
 
     Ok(())
 }
